@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memory-core"
+version = "0.1.0"
+description = "Core engine for managing repository memory books"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+memoc = "memory_core.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
