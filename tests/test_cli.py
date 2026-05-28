@@ -146,6 +146,7 @@ class InitMemoryBookTests(TestCase):
                 (repo_root / ".memoc" / "branch").resolve(), target_path.resolve()
             )
             self.assertTrue((repo_root / ".memoc" / "branch").is_symlink())
+            self.assertFalse((repo_root / ".memoc" / "branches").exists())
 
     def test_creates_named_branch_memory_book(self) -> None:
         with TemporaryDirectory() as tmpdir:
@@ -237,13 +238,19 @@ class InitMemoryBookTests(TestCase):
             self.assertTrue(target_path.is_dir())
             self.assertEqual(
                 (repo_root / ".memoc" / "branch").resolve(),
+                target_path.resolve(),
+            )
+            self.assertTrue((repo_root / ".memoc" / "branch").is_symlink())
+            self.assertEqual(
+                (repo_root / ".memoc" / "branches").resolve(),
                 branch_root_path.resolve(),
             )
-            self.assertTrue((repo_root / ".memoc" / "branch" / "main").is_dir())
+            self.assertTrue((repo_root / ".memoc" / "branches").is_symlink())
+            self.assertTrue((repo_root / ".memoc" / "branches" / "main").is_dir())
             self.assertTrue(
-                (repo_root / ".memoc" / "branch" / "feature" / "foo").is_dir()
+                (repo_root / ".memoc" / "branches" / "feature" / "foo").is_dir()
             )
-            self.assertTrue((repo_root / ".memoc" / "branch" / "agent").is_dir())
+            self.assertTrue((repo_root / ".memoc" / "branches" / "agent").is_dir())
 
     def test_narrows_branch_link_after_exposing_all(self) -> None:
         with TemporaryDirectory() as tmpdir:
@@ -271,6 +278,7 @@ class InitMemoryBookTests(TestCase):
                 (repo_root / ".memoc" / "branch").resolve(),
                 main_target_path.resolve(),
             )
+            self.assertFalse((repo_root / ".memoc" / "branches").exists())
             self.assertFalse((repo_root / ".memoc" / "branch" / "feature").exists())
 
     def test_creates_named_branch_memory_book_while_exposing_all(self) -> None:
@@ -300,10 +308,15 @@ class InitMemoryBookTests(TestCase):
             self.assertTrue(target_path.is_dir())
             self.assertEqual(
                 (repo_root / ".memoc" / "branch").resolve(),
-                branch_root_path.resolve(),
+                target_path.resolve(),
             )
             self.assertTrue((repo_root / ".memoc" / "branch").is_symlink())
-            self.assertTrue((repo_root / ".memoc" / "branch" / "agent").is_dir())
+            self.assertEqual(
+                (repo_root / ".memoc" / "branches").resolve(),
+                branch_root_path.resolve(),
+            )
+            self.assertTrue((repo_root / ".memoc" / "branches").is_symlink())
+            self.assertTrue((repo_root / ".memoc" / "branches" / "agent").is_dir())
 
     def test_rejects_existing_local_memoc_path_that_is_not_symlink(self) -> None:
         with TemporaryDirectory() as tmpdir:

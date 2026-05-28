@@ -6,8 +6,9 @@ It creates a per-repository memory book under a separate `memory-books` director
 and exposes it from the current repository through local `.memoc/` symlinks.
 
 ```text
-.memoc/share  -> repository-wide notes
-.memoc/branch -> branch-specific notes
+.memoc/share    -> repository-wide notes
+.memoc/branch   -> selected branch notes
+.memoc/branches -> all branch notes, created only when requested
 ```
 
 The intended setup is to manage `memory-books` as a private Git repository.
@@ -157,8 +158,9 @@ memory-books/github.com/org/repo/branch/feature/foo
 
 ### `memoc branch --all`
 
-Create a memory book for the current Git branch, then point `.memoc/branch` at
-the parent directory containing all branch memories.
+Create a memory book for the current Git branch, keep `.memoc/branch` pointing
+at that current branch memory, and create `.memoc/branches` pointing at the
+parent directory containing all branch memories.
 
 ```bash
 memoc branch --all
@@ -173,15 +175,17 @@ memory-books/github.com/org/repo/branch/agent
 And links:
 
 ```text
-.memoc/branch -> memory-books/github.com/org/repo/branch
+.memoc/branch   -> memory-books/github.com/org/repo/branch/agent
+.memoc/branches -> memory-books/github.com/org/repo/branch
 ```
 
-That makes all branch memories visible under `.memoc/branch/`.
+That makes the selected branch writable through `.memoc/branch/` while all
+branch memories are visible under `.memoc/branches/`.
 
 ### `memoc branch <name> --all`
 
-Create a named branch memory, then expose all branch memories through
-`.memoc/branch`.
+Create a named branch memory, keep `.memoc/branch` pointing at that named branch
+memory, and expose all branch memories through `.memoc/branches`.
 
 ```bash
 memoc branch agent --all
@@ -229,6 +233,8 @@ same memory book.
 
 Use `.memoc/share/` for notes that should survive branch changes.
 Use `.memoc/branch/` for notes about the current branch or task.
+Use `.memoc/branches/` only when you intentionally want to inspect notes from
+other branches.
 
 ## Development
 

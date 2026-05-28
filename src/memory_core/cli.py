@@ -43,8 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--all",
         action="store_true",
         help=(
-            "Point .memoc/branch to the directory containing all branch memory books. "
-            "Create the selected branch memory book first."
+            "Create .memoc/branches pointing to the directory containing all branch "
+            "memory books."
         ),
     )
     branch_parser.set_defaults(func=cmd_branch)
@@ -88,12 +88,13 @@ def init_branch_memory_book(
     target_path = branch_root_path / branch_path
     target_path.mkdir(parents=True, exist_ok=True)
 
-    if expose_all_branches:
-        branch_root_path.mkdir(parents=True, exist_ok=True)
-        create_local_memoc_links(repo_root, repo_memory_book_path, branch_root_path)
-        return target_path
-
-    create_local_memoc_links(repo_root, repo_memory_book_path, target_path)
+    all_branches_path = branch_root_path if expose_all_branches else None
+    create_local_memoc_links(
+        repo_root,
+        repo_memory_book_path,
+        target_path,
+        all_branches_path=all_branches_path,
+    )
     return target_path
 
 
@@ -242,7 +243,10 @@ def get_branch_path(branch_name: str) -> Path:
 
 
 def create_local_memoc_links(
-    repo_root: Path, repo_memory_book_path: Path, branch_memory_book_path: Path
+    repo_root: Path,
+    repo_memory_book_path: Path,
+    branch_memory_book_path: Path,
+    all_branches_path: Path | None = None,
 ) -> None:
     local_memoc_path = repo_root / ".memoc"
     if local_memoc_path.is_symlink() or (
@@ -257,6 +261,12 @@ def create_local_memoc_links(
         local_memoc_path / "share", repo_memory_book_path / "share"
     )
     create_or_replace_symlink(local_memoc_path / "branch", branch_memory_book_path)
+
+    branches_link_path = local_memoc_path / "branches"
+    if all_branches_path:
+        create_or_replace_symlink(branches_link_path, all_branches_path)
+    elif branches_link_path.is_symlink():
+        branches_link_path.unlink()
 
 
 def create_or_replace_symlink(link_path: Path, target_path: Path) -> None:
