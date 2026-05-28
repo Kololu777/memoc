@@ -1,16 +1,50 @@
-# memory-core
+# memoc
 
-`memory-core` は、リポジトリごとのメモ帳である `memory-books` を操作するためのコアエンジンです。
+`memoc` is a small CLI for keeping repository notes outside the working tree.
 
-`memory-books` 自体は private GitHub repository として管理し、`ghq` で clone しておく想定です。`memoc init` は現在の `ghq` 管理下の Git repository に対応するメモ帳ディレクトリを、`memory-books` 配下に同じ階層で作成します。
+It creates a per-repository memory book under a separate `memory-books` directory
+and exposes it from the current repository through local `.memoc/` symlinks.
+
+```text
+.memoc/share  -> repository-wide notes
+.memoc/branch -> branch-specific notes
+```
+
+The intended setup is to manage `memory-books` as a private Git repository.
+`memoc` then gives each source repository its own note area inside that private
+repository.
 
 ## Requirements
 
-- Python 3.12 以上
+- Python 3.12 or later
 - Git
-- ghq
+- ghq recommended
+- Nix optional
 
-## Setup
+`memoc` works best with repositories managed by `ghq`, but it also supports
+worktrees outside `ghq`, such as `gwq` or `~/worktrees`.
+
+## Install
+
+### Nix
+
+From this repository:
+
+```bash
+nix profile install .
+```
+
+You can also run it without installing:
+
+```bash
+nix run .# -- --help
+nix run .#init
+nix run .#branch
+```
+
+### Python
+
+From this repository:
 
 ```bash
 python -m venv .venv
@@ -20,59 +54,198 @@ python -m pip install -e .
 
 ## Configuration
 
-`memory-books` の root path はユーザー設定として `~/.config/memoc/config.toml` に書きます。初回実行時に設定ファイルがなければ、`memoc init` が雛形を作成します。
+Create a private `memory-books` repository wherever you want to store notes.
+Then point `memoc` at it.
+
+The default config file is:
+
+```text
+~/.config/memoc/config.toml
+```
+
+Example:
 
 ```toml
-memory_books_root = "/home/ko/ghq/github.com/your-name/memory-books"
+memory_books_root = "/home/alice/ghq/github.com/alice/memory-books"
 ```
 
-環境変数で一時的に上書きすることもできます。
+You can override the root temporarily with an environment variable:
 
 ```bash
-export MEMOC_MEMORY_BOOKS_ROOT=/home/ko/ghq/github.com/your-name/memory-books
+export MEMOC_MEMORY_BOOKS_ROOT=/home/alice/ghq/github.com/alice/memory-books
 ```
 
-設定ファイルの場所を変えたい場合は `MEMOC_CONFIG` または `memoc --config` を使えます。
+You can also use a different config file:
+
+```bash
+memoc --config /path/to/config.toml init
+```
+
+If the config file does not exist, `memoc init` creates a template and asks you
+to set `memory_books_root`.
+
+## Quick Start
+
+In a Git repository:
+
+```bash
+memoc init
+memoc branch
+```
+
+This creates the repository memory book and links it into the working tree:
+
+```text
+.memoc/share
+.memoc/branch
+```
+
+`.memoc/` is local state. Add it to `.gitignore` in repositories where you use
+`memoc`.
 
 ## Usage
+
+### `memoc init`
+
+Create the repository-wide memory book and `share/`.
 
 ```bash
 memoc init
 ```
 
-例えば、現在の repository が次の場所にあるとします。
+Example output path:
 
 ```text
-/home/ko/ghq/github.com/foo/bar
+/home/alice/ghq/github.com/alice/memory-books/github.com/org/repo
 ```
 
-設定が次の値なら、
+### `memoc branch`
 
-```toml
-memory_books_root = "/home/ko/ghq/github.com/your-name/memory-books"
+Create a memory book for the current Git branch and point `.memoc/branch` at it.
+
+```bash
+memoc branch
 ```
 
-`memoc init` は次のディレクトリを作成します。
+If the current Git branch is `main`, this creates:
 
 ```text
-/home/ko/ghq/github.com/your-name/memory-books/github.com/foo/bar
+memory-books/github.com/org/repo/branch/main
 ```
 
-## Project Structure
+And links:
 
 ```text
-.
-├── main.py
-├── pyproject.toml
-├── README.md
-└── src/
-    └── memory_core/
-        ├── __init__.py
-        ├── cli.py
-        └── config.py
+.memoc/share  -> memory-books/github.com/org/repo/share
+.memoc/branch -> memory-books/github.com/org/repo/branch/main
 ```
 
-## Development Notes
+### `memoc branch <name>`
 
-- 依存関係を追加したら `pyproject.toml` に反映します。
-- `memory_books_root` は存在するディレクトリである必要があります。`memory-books` repository は先に clone してください。
+Create a memory book for a named branch without switching Git branches, then
+point `.memoc/branch` at that named branch memory.
+
+```bash
+memoc branch feature/foo
+```
+
+This creates:
+
+```text
+memory-books/github.com/org/repo/branch/feature/foo
+```
+
+### `memoc branch --all`
+
+Create a memory book for the current Git branch, then point `.memoc/branch` at
+the parent directory containing all branch memories.
+
+```bash
+memoc branch --all
+```
+
+If the current Git branch is `agent`, this creates:
+
+```text
+memory-books/github.com/org/repo/branch/agent
+```
+
+And links:
+
+```text
+.memoc/branch -> memory-books/github.com/org/repo/branch
+```
+
+That makes all branch memories visible under `.memoc/branch/`.
+
+### `memoc branch <name> --all`
+
+Create a named branch memory, then expose all branch memories through
+`.memoc/branch`.
+
+```bash
+memoc branch agent --all
+```
+
+This is useful for agents or review workflows that should create their own
+branch memory while still reading notes from other branches.
+
+## Path Resolution
+
+`memoc` chooses the memory-book path in this order:
+
+1. If the current repository is under a `ghq` root, use the path relative to
+   that `ghq` root.
+2. If the current repository is a worktree outside `ghq`, use the common
+   worktree root when that root is under `ghq`.
+3. If neither works, parse `origin` and use a path like
+   `github.com/org/repo`.
+
+For example, this source repository:
+
+```text
+/home/alice/ghq/github.com/org/repo
+```
+
+maps to:
+
+```text
+memory-books/github.com/org/repo
+```
+
+A `gwq` or `git worktree` checkout of the same repository should map to the
+same memory book.
+
+## Suggested Note Layout
+
+`memoc` does not enforce note filenames or formats. A common pattern is:
+
+```text
+.memoc/share/project.md
+.memoc/share/commands.md
+.memoc/branch/session.md
+.memoc/branch/todo.md
+```
+
+Use `.memoc/share/` for notes that should survive branch changes.
+Use `.memoc/branch/` for notes about the current branch or task.
+
+## Development
+
+Run tests:
+
+```bash
+python -m unittest discover -s tests
+```
+
+Use the Nix development shell:
+
+```bash
+nix develop
+```
+
+Build and run with Nix:
+
+```bash
+nix run .# -- --help
+```
