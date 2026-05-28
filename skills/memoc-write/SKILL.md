@@ -17,6 +17,36 @@ Write matters that should be shared across branches under `.memoc/share/`.
 
 If `.memoc/` does not exist, use `memoc-create` first.
 
+## Provenance Header
+
+For new memoc notes, include a short provenance header near the top:
+
+```markdown
+Created: YYYY-MM-DD
+Author: Codex | Claude | <agent name>
+Agent session: `<session id or unknown>`
+Checkout: `<current git branch or checkout>`
+```
+
+For Codex, use `CODEX_THREAD_ID` as the session id when available.
+
+For Claude Code, use the `session_id` from hook/statusline JSON when available.
+If it is not available, write `unknown`.
+
+When updating an existing note, preserve its original `Created` value. If
+tracking the edit is useful, add or update the `Updated: YYYY-MM-DD` line near
+the same header. Do not require `Updated` for every small edit.
+
+For meaningful updates, add or update a `## Changelog` section in the note. Use it
+as a short changelog for that Markdown file, not as a full conversation log.
+Keep entries concise:
+
+```markdown
+## Changelog
+
+- YYYY-MM-DD: <summary of what changed>
+```
+
 ## Agent Branches
 
 When using a sub-agent that should not see notes from other branches, create a dedicated branch memory first.
@@ -25,7 +55,7 @@ When using a sub-agent that should not see notes from other branches, create a d
 memoc branch sub-branch
 ```
 
-When an agent should write while seeing notes from multiple branches, create a dedicated branch memory and expose all branch memories through `.memoc/branch`.
+When an agent should write while seeing notes from multiple branches, create a dedicated branch memory and expose all branch memories through `.memoc/branches`.
 
 ```bash
 memoc branch agent --all
