@@ -1,4 +1,4 @@
 interface:
   display_name: "Memoc Create"
-  short_description: "Create memoc for a new repository"
-  default_prompt: "Use $memoc-create to initialize memoc for this repository."
+  short_description: "Initialize or migrate a memoc repository"
+  default_prompt: "Use $memoc-create to initialize or migrate memoc for this repository."

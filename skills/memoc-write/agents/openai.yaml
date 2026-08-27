@@ -1,4 +1,4 @@
 interface:
   display_name: "Memoc Write"
-  short_description: "Guide where to write .memoc notes"
-  default_prompt: "Use $memoc-write to route notes into .memoc/branch or .memoc/share."
+  short_description: "Operate memoc notes safely through the CLI"
+  default_prompt: "Use $memoc-write to read or update a memoc note through the versioned JSON CLI."

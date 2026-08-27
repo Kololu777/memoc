@@ -1,30 +1,65 @@
 ---
 name: memoc-create
-description: Initialize memoc for a new or unconfigured Git repository by creating the repository memory book under memory-books and local .memoc links. Use when asked to make memoc available, create .memoc, or create the memory-books area for a repository.
+description: Initialize memoc for a new Git repository or migrate an existing symlink-only setup to a regular context manifest. Use when asked to configure memoc or create .memoc local state.
 ---
 
 # Memoc Create
 
-## Purpose
+Initialize or migrate memoc through its CLI. Do not create memory-book paths or
+`.memoc` links manually.
 
-Use the `memoc` CLI to create a memory book for a repository under `memory-books` and create `.memoc/` in the working repository.
+## Verify the CLI
 
-## Steps
+Run commands from the source repository root. Confirm that
+`memoc migrate --help` succeeds. If it does not, stop and report that the
+installed memoc is too old; do not reproduce the setup with direct filesystem
+operations.
 
-1. Confirm the working directory is inside the target Git repository.
-2. Run `git rev-parse --show-toplevel`, then run later `memoc` commands from the repository root.
-3. Run `memoc init` to create the repository memory book and `share/` under `memory-books`.
-4. Run `memoc branch` to create the current branch memory book plus `.memoc/share` and `.memoc/branch`.
-5. Run `ls -la .memoc` and confirm `share` and `branch` are symlinks.
+## New repository setup
+
+1. Confirm the target with `git rev-parse --show-toplevel`.
+2. Run `memoc init`.
+3. Run `memoc branch` or `memoc branch <name>` when the user selected a
+   particular memory branch.
+4. Run `memoc context --json` and require `manifest_exists` to be true.
+5. Run `memoc doctor --json` and report any inaccessible local storage.
+
+`memoc branch` creates `.memoc/context.toml` as a regular file and retains the
+legacy `.memoc/share` and `.memoc/branch` symlinks for compatibility.
+
+## Existing symlink-only setup
+
+Run `memoc context --json`. If `manifest_exists` is false, run:
+
+```bash
+memoc migrate --json
+```
+
+Migration records the branch selected by the legacy `.memoc/branch` symlink
+without replacing that link. If the legacy branch cannot be inferred, pass an
+explicit branch only when it is known:
+
+```bash
+memoc migrate --branch main --json
+```
+
+Run `memoc context --json` afterward and require `manifest_exists` to be true.
+Use `memoc branch <name>` instead of migration when intentionally changing an
+already-recorded selected branch.
 
 ## Configuration
 
-`memoc` uses `memory_books_root` from `~/.config/memoc/config.toml`. If it is not configured, `memoc init` creates the config file and stops; ask the user for the `memory-books` repository path.
+Memoc reads `memory_books_root` from `~/.config/memoc/config.toml`. An absent
+config causes `memoc init` to create a template and stop; ask the user for the
+actual private memory-books repository path rather than inventing one.
 
-Respect `MEMOC_CONFIG`, `memoc --config`, and `MEMOC_MEMORY_BOOKS_ROOT` when the user provides them.
+Respect `MEMOC_CONFIG`, `memoc --config`, and `MEMOC_MEMORY_BOOKS_ROOT` when the
+user provides them. A global `--config` option goes before the subcommand.
 
 ## Safety
 
-- Treat `.memoc/` as local state. Do not add it to Git.
-- Do not invent the `memory-books` path.
-- Do not overwrite existing files at `.memoc/share` or `.memoc/branch`.
+- Treat `.memoc` as uncommitted local state.
+- Do not overwrite ordinary files at `.memoc/share`, `.memoc/branch`, or
+  `.memoc/context.toml`.
+- Use the `memoc-write` workflow for note content; do not write through the
+  compatibility symlinks.

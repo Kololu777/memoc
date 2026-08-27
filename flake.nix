@@ -26,7 +26,7 @@
         {
           default = python.pkgs.buildPythonApplication {
             pname = "memoc";
-            version = "0.1.0";
+            version = "0.2.0";
             format = "pyproject";
 
             src = ./.;
@@ -43,11 +43,19 @@
             '';
 
             postInstall = ''
+              mkdir -p $out/share/memoc/skills
+              cp -R \
+                ${./skills}/memoc-create \
+                ${./skills}/memoc-write \
+                $out/share/memoc/skills/
+
               wrapProgram $out/bin/memoc \
-                --prefix PATH : ${pkgs.lib.makeBinPath [
-                  pkgs.git
-                  pkgs.ghq
-                ]}
+                --prefix PATH : ${
+                  pkgs.lib.makeBinPath [
+                    pkgs.git
+                    pkgs.ghq
+                  ]
+                }
             '';
 
             pythonImportsCheck = [ "memory_core" ];
@@ -89,8 +97,52 @@
           memoc = memocApp;
           init = memocSubcommandApp "init";
           branch = memocSubcommandApp "branch";
+          context = memocSubcommandApp "context";
+          migrate = memocSubcommandApp "migrate";
+          list = memocSubcommandApp "list";
+          read = memocSubcommandApp "read";
+          write = memocSubcommandApp "write";
+          doctor = memocSubcommandApp "doctor";
         }
       );
+
+      homeManagerModules.default =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        let
+          cfg = config.programs.memoc;
+          system = pkgs.stdenv.hostPlatform.system;
+        in
+        {
+          options.programs.memoc = {
+            enable = lib.mkEnableOption "memoc repository memory books";
+
+            package = lib.mkOption {
+              type = lib.types.package;
+              default = self.packages.${system}.default;
+              description = "The memoc package, including its bundled Codex skills.";
+            };
+
+            installCodexSkills = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Install the bundled memoc skills for Codex.";
+            };
+          };
+
+          config = lib.mkIf cfg.enable {
+            home.packages = [ cfg.package ];
+
+            home.file = lib.mkIf cfg.installCodexSkills {
+              ".codex/skills/memoc-create".source = "${cfg.package}/share/memoc/skills/memoc-create";
+              ".codex/skills/memoc-write".source = "${cfg.package}/share/memoc/skills/memoc-write";
+            };
+          };
+        };
 
       devShells = forAllSystems (
         system:
